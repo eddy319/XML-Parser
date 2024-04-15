@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <title>XML to HTML 변환기</title>
+    <style>
+      #inputXml,
+      #outputHtml {
+        width: 90%;
+        height: 200px;
+        margin: 10px;
+        padding: 10px;
+        border: 1px solid #ccc;
+      }
+      #renderedHtml {
+        border: 1px solid #ccc;
+        margin: 10px;
+        padding: 10px;
+        background-color: #f9f9f9;
+      }
+      button {
+        margin: 10px;
+        padding: 10px 20px;
+        font-size: 16px;
+      }
+    </style>
+    <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+    <script
+      id="MathJax-script"
+      async
+      src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"
+    ></script>
+  </head>
+  <body>
+    <h1>XML to HTML 변환기</h1>
+    <textarea id="inputXml" placeholder="여기에 XML을 입력하세요..."></textarea>
+    <button onclick="convertXmlToHtml()">변환하기</button>
+    <h2>변환된 HTML 코드</h2>
+    <textarea id="outputHtml" readonly></textarea>
+    <h2>렌더링된 HTML</h2>
+    <div id="renderedHtml"></div>
+
+    <script>
+      function convertXmlToHtml() {
+        const xml = document.getElementById("inputXml").value;
+        const output = document.getElementById("outputHtml");
+        const renderDiv = document.getElementById("renderedHtml");
+        try {
+          const parser = new DOMParser();
+          const xmlDoc = parser.parseFromString(xml, "text/xml");
+
+          let htmlResult = "";
+
+          const elements = xmlDoc.getElementsByTagName("P");
+          for (let elem of elements) {
+            let pContent = "<p>";
+            Array.from(elem.children).forEach((child) => {
+              switch (child.tagName) {
+                case "TEXT":
+                  pContent += handleText(child);
+                  break;
+                case "PICTURE":
+                  pContent += `<img src="${child.textContent.trim()}" alt="Image">`;
+                  break;
+              }
+            });
+            pContent += "</p>";
+            htmlResult += pContent;
+          }
+
+          output.value = htmlResult;
+          renderDiv.innerHTML = htmlResult;
+          MathJax.typesetPromise();
+        } catch (e) {
+          output.value = "XML 파싱 에러: " + e.message;
+          renderDiv.innerHTML = "<p>Error: " + e.message + "</p>";
+        }
+      }
+
+      function handleText(textElem) {
+        let result = "";
+        Array.from(textElem.children).forEach((child) => {
+          if (child.tagName === "CHAR") {
+            result += `<span>${child.textContent}</span>`;
+          } else if (child.tagName === "EQUATION") {
+            let script = child.getElementsByTagName("SCRIPT")[0];
+            let cleanedText = script.textContent.replace(/{{|}}/g, "").trim();
+            cleanedText = convertMathSymbols(cleanedText);
+            result += `<span class="math">${cleanedText}</span>`;
+          }
+        });
+        return result;
+      }
+
+      function convertMathSymbols(text) {
+        return text
+          .replace(/box{([^}]*)}/g, "\\boxed{$1}")
+          .replace(/CDOTS/g, "\\cdots")
+          .replace(/RARROW/g, "\\rightarrow");
+      }
+    </script>
+  </body>
+</html>
